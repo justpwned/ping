@@ -1,5 +1,5 @@
 # Ping
-Simple Ping implementation in Python
+Simple ping implementation in Python
 
 ## Usage
 
