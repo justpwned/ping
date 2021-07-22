@@ -75,6 +75,7 @@ class Ping:
         self.stats = PingStats()
         self.icmp_type_echo = 8
         self.icmp_code_echo = 0
+        self.icmp_seq = 1
 
     def create_icmp_echo_message_packet(self, id, seq, data):
         checksum = 0
@@ -96,12 +97,14 @@ class Ping:
 
             recvdata, host = self.socket.recvfrom(1024)
             self.stats.received += 1
+            # Extract TTL
+            ttl = struct.unpack('B', recvdata[8:9])
             type, code, checksum, pid, seq, data = struct.unpack('BBHHHd', recvdata[20:36])
             if type == 0:
                 if code == 0 and pid == id:
                     rtt = (time.time() - data) * 1000
                     self.stats.rtts.append(rtt)
-                    return host[0], rtt, len(recvdata)
+                    return host[0], rtt, len(recvdata), seq, ttl[0]
             elif type == 3:
                 if code == 0:
                     raise ICMPError('Destination Network Unreachable')
@@ -110,20 +113,22 @@ class Ping:
 
     def send_ping(self):
         id = os.getpid()
-        icmp_packet = self.create_icmp_echo_message_packet(id, 1, time.time())
+        icmp_packet = self.create_icmp_echo_message_packet(id, self.icmp_seq, time.time())
         self.socket.sendto(icmp_packet, (self.host, 1))
         self.stats.transmitted += 1
+        self.icmp_seq += 1
         return id
 
     def ping(self):
         id = self.send_ping()
         try:
-            host, rtt, length = self.recv_ping(id)
+            host, rtt, length, seq, ttl = self.recv_ping(id)
             fqdn = socket.getfqdn(host)
             if fqdn != host:
-                print(f'{length} bytes from {fqdn} ({host}): rtt={rtt:.2f} ms')
+                hostname = f'{fqdn} ({host})'
             else:
-                print(f'{length} bytes from {host}: rtt={rtt:.2f} ms')
+                hostname = f'{host}'
+            print(f'{length} bytes from {hostname}: icmp_seq={seq} ttl={ttl} rtt={rtt:.2f} ms')
         except ICMPError as ex:
             print(ex)
             sys.exit(0)
