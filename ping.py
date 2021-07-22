@@ -6,7 +6,6 @@ import struct
 import os
 import time
 import select
-import itertools
 import signal
 import sys
 
