@@ -21,9 +21,8 @@ optional arguments:
 
 ## Sample output
 
-```
-sudo ./ping.py google.com -c 6
-
+**```sudo ./ping.py google.com -c 6```**
+````
 36 bytes from lo-in-f100.1e100.net (173.194.222.100): icmp_seq=1 ttl=58 rtt=42.61 ms
 36 bytes from lo-in-f100.1e100.net (173.194.222.100): icmp_seq=2 ttl=58 rtt=42.11 ms
 36 bytes from lo-in-f100.1e100.net (173.194.222.100): icmp_seq=3 ttl=58 rtt=42.12 ms
