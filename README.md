@@ -19,7 +19,7 @@ optional arguments:
                         number of packets to send
 ```
 
-## Ping google.com output
+## ping google.com
 
 ```
 36 bytes from 142.250.150.113: rtt=79.76 ms
