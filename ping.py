@@ -68,9 +68,10 @@ class PingStats:
 
 
 class Ping:
-    def __init__(self, host, timeout):
+    def __init__(self, host, timeout, interval):
         self.host = host
         self.timeout = timeout
+        self.interval = interval
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_ICMP)
         self.stats = PingStats()
         self.icmp_type_echo = 8
@@ -117,7 +118,19 @@ class Ping:
 
     def ping(self):
         id = self.send_ping()
-        return self.recv_ping(id)
+        try:
+            host, rtt, length = self.recv_ping(id)
+            fqdn = socket.getfqdn(host)
+            if fqdn != host:
+                print(f'{length} bytes from {fqdn} ({host}): rtt={rtt:.2f} ms')
+            else:
+                print(f'{length} bytes from {host}: rtt={rtt:.2f} ms')
+        except ICMPError as ex:
+            print(ex)
+            sys.exit(0)
+        except PingError as ex:
+            print(ex)
+        time.sleep(self.interval)
 
     def print_stats(self):
         print(f'--- {self.host} ping statistics ---')
@@ -139,28 +152,23 @@ def parse_args():
     parser.add_argument('host', help='host address')
     parser.add_argument('-t', '--timeout', help='time to wait for response, in seconds (4s by default)',
                         type=float, default=4)
-    parser.add_argument('-n', '--number', help='number of packets to send', type=int, default=0)
+    parser.add_argument('-c', '--count', help='number of packets to send', type=int, default=0)
+    parser.add_argument('-i', '--interval', help='wait interval seconds between sending each packet (1s by default)',
+                        type=float, default=1)
     return parser.parse_args()
 
 
 if __name__ == '__main__':
     args = parse_args()
-    ping = Ping(args.host, args.timeout)
+    ping = Ping(args.host, args.timeout, args.interval)
     signal.signal(signal.SIGINT, lambda signum, frame: ping.signal_handler(signum, frame))
 
-    for i in itertools.count(args.number):
-        try:
-            host, rtt, length = ping.ping()
-            fqdn = socket.getfqdn(host)
-            if fqdn != host:
-                print(f'{length} bytes from {fqdn} ({host}): rtt={rtt:.2f} ms')
-            else:
-                print(f'{length} bytes from {host}: rtt={rtt:.2f} ms')
-        except ICMPError as ex:
-            print(ex)
-            sys.exit(0)
-        except PingError as ex:
-            print(ex)
-        time.sleep(1)
+    count = args.count
+    if count == 0:
+        while True:
+            ping.ping()
+    else:
+        for i in range(count):
+            ping.ping()
 
     ping.print_stats()
